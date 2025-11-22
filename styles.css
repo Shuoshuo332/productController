@@ -1,0 +1,154 @@
+/* 仓库管理系统样式文件 */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.display-4 {
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.btn {
+    border-radius: 6px;
+}
+
+.table-responsive {
+    border-radius: 8px;
+}
+
+.table th {
+    background-color: #f1f3f5;
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+.badge {
+    font-size: 0.85em;
+}
+
+.status-low {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.status-normal {
+    background-color: #28a745;
+}
+
+.status-out {
+    background-color: #dc3545;
+}
+
+.text-primary {
+    color: #0d6efd !important;
+}
+
+.text-success {
+    color: #198754 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+/* 模态框样式 */
+.modal-header {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+
+/* 表单样式 */
+.form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* 加载动画 */
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(13, 110, 253, 0.3);
+    border-radius: 50%;
+    border-top-color: #0d6efd;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+    
+    .card {
+        margin-bottom: 1rem;
+    }
+    
+    .display-4 {
+        font-size: 1.5rem;
+    }
+}
+
+/* 空状态样式 */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+/* 成功提示 */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1050;
+}
+
+.toast {
+    min-width: 250px;
+}
+
+/* 统计卡片动画 */
+.card-body .display-4 {
+    transition: all 0.3s ease;
+}
+
+.card:hover .display-4 {
+    transform: scale(1.05);
+}
