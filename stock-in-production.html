@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商品入库 - 仓库管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="index-production.html">仓库管理系统</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="index-production.html">首页</a>
+                <a class="nav-link" href="inventory-production.html">库存列表</a>
+                <a class="nav-link active" href="stock-in-production.html">商品入库</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <h2>商品入库</h2>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5>📦 批量入库</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="stockInForm">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">供应商</label>
+                                    <input type="text" class="form-control" id="supplier" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">批次号</label>
+                                    <input type="text" class="form-control" id="batchNumber" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">入库日期</label>
+                                    <input type="date" class="form-control" id="stockInDate" required>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">入库商品列表</h6>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="addProduct()">+ 添加商品</button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm" id="stockInTable">
+                                        <thead>
+                                            <tr>
+                                                <th>商品</th>
+                                                <th>入库数量</th>
+                                                <th>单价</th>
+                                                <th>总金额</th>
+                                                <th>备注</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stockInItems">
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted">
+                                                    点击上方"+ 添加商品"开始添加
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-6">
+                                        <h5>汇总信息</h5>
+                                        <p><strong>商品数量:</strong> <span id="totalProducts">0</span> 种</p>
+                                        <p><strong>入库数量:</strong> <span id="totalQuantity">0</span> 件</p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5>总金额</h5>
+                                        <h3 class="text-success" id="totalAmount">¥0.00</h3>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="text-center">
+                            <button type="button" class="btn btn-success btn-lg" onclick="submitStockIn()">
+                                💾 提交入库
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-lg ms-2" onclick="resetForm()">
+                                🔄 重置表单
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="config-production.js"></script>
+    
+    <script>
+        let stockInItems = [];
+        let products = [];
+        let categories = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 商品入库页面加载完成');
+            
+            // 设置默认日期
+            document.getElementById('stockInDate').value = new Date().toISOString().split('T')[0];
+            
+            // 等待配置加载
+            const waitForConfig = () => {
+                if (typeof supabase !== 'undefined' && supabase) {
+                    console.log('✅ 配置加载完成，开始加载数据');
+                    loadData();
+                } else {
+                    console.log('⏳ 等待配置加载...');
+                    setTimeout(waitForConfig, 100);
+                }
+            };
+            
+            waitForConfig();
+        });
+
+        async function loadData() {
+            try {
+                await Promise.all([
+                    loadProducts(),
+                    loadCategories()
+                ]);
+            } catch (error) {
+                console.error('数据加载失败:', error);
+                showMessage('数据加载失败: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const { data: productData, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .order('name');
+                
+                if (error) throw error;
+                
+                products = productData || [];
+                console.log('📦 加载商品:', products.length);
+                
+            } catch (error) {
+                console.error('商品加载失败:', error);
+                throw error;
+            }
+        }
+
+        async function loadCategories() {
+            try {
+                const { data: categoryData, error } = await supabase
+                    .from('categories')
+                    .select('*')
+                    .order('name');
+                
+                if (error) throw error;
+                
+                categories = categoryData || [];
+                console.log('🏷️ 加载类别:', categories.length);
+                
+            } catch (error) {
+                console.error('类别加载失败:', error);
+                throw error;
+            }
+        }
+
+        function addProduct() {
+            const itemId = Date.now().toString();
+            const item = {
+                id: itemId,
+                productId: '',
+                quantity: 1,
+                price: 0,
+                notes: ''
+            };
+            
+            stockInItems.push(item);
+            renderStockInTable();
+        }
+
+        function renderStockInTable() {
+            const tbody = document.getElementById('stockInItems');
+            
+            if (stockInItems.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            点击上方"+ 添加商品"开始添加
+                        </td>
+                    </tr>
+                `;
+                updateTotals();
+                return;
+            }
+
+            let html = '';
+            stockInItems.forEach(item => {
+                const selectedProduct = products.find(p => p.id === item.productId);
+                const productName = selectedProduct ? selectedProduct.name : '请选择商品';
+                const currentStock = selectedProduct ? selectedProduct.current_stock || 0 : 0;
+                
+                html += `
+                    <tr>
+                        <td>
+                            <select class="form-control form-control-sm" onchange="updateProduct('${item.id}', this.value)">
+                                <option value="">选择商品</option>
+                                ${products.map(product => `
+                                    <option value="${product.id}" ${item.productId === product.id ? 'selected' : ''}>
+                                        ${product.name} (${product.sku}) - 当前库存: ${product.current_stock || 0}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" 
+                                   value="${item.quantity}" min="1" 
+                                   onchange="updateQuantity('${item.id}', this.value)">
+                        </td>
+                        <td>
+                            <input type="number" class="form-control form-control-sm" 
+                                   value="${item.price}" min="0" step="0.01"
+                                   onchange="updatePrice('${item.id}', this.value)">
+                        </td>
+                        <td>¥${(item.quantity * item.price).toFixed(2)}</td>
+                        <td>
+                            <input type="text" class="form-control form-control-sm" 
+                                   value="${item.notes}" placeholder="备注"
+                                   onchange="updateNotes('${item.id}', this.value)">
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                    onclick="removeItem('${item.id}')">删除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+            updateTotals();
+        }
+
+        function updateProduct(itemId, productId) {
+            const item = stockInItems.find(i => i.id === itemId);
+            const product = products.find(p => p.id === productId);
+            
+            if (item) {
+                item.productId = productId;
+                if (product) {
+                    item.price = product.price || 0;
+                }
+                renderStockInTable();
+            }
+        }
+
+        function updateQuantity(itemId, quantity) {
+            const item = stockInItems.find(i => i.id === itemId);
+            if (item) {
+                item.quantity = Math.max(1, parseInt(quantity) || 0);
+                renderStockInTable();
+            }
+        }
+
+        function updatePrice(itemId, price) {
+            const item = stockInItems.find(i => i.id === itemId);
+            if (item) {
+                item.price = Math.max(0, parseFloat(price) || 0);
+                renderStockInTable();
+            }
+        }
+
+        function updateNotes(itemId, notes) {
+            const item = stockInItems.find(i => i.id === itemId);
+            if (item) {
+                item.notes = notes;
+            }
+        }
+
+        function removeItem(itemId) {
+            stockInItems = stockInItems.filter(i => i.id !== itemId);
+            renderStockInTable();
+        }
+
+        function updateTotals() {
+            const uniqueProducts = new Set(stockInItems.map(i => i.productId)).size;
+            const totalQuantity = stockInItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+            const totalAmount = stockInItems.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0);
+            
+            document.getElementById('totalProducts').textContent = uniqueProducts;
+            document.getElementById('totalQuantity').textContent = totalQuantity;
+            document.getElementById('totalAmount').textContent = `¥${totalAmount.toFixed(2)}`;
+        }
+
+        async function submitStockIn() {
+            try {
+                // 验证表单
+                const supplier = document.getElementById('supplier').value;
+                const batchNumber = document.getElementById('batchNumber').value;
+                const stockInDate = document.getElementById('stockInDate').value;
+
+                if (!supplier || !batchNumber || !stockInDate) {
+                    showMessage('请填写完整的入库信息', 'warning');
+                    return;
+                }
+
+                if (stockInItems.length === 0) {
+                    showMessage('请至少添加一个商品', 'warning');
+                    return;
+                }
+
+                const validItems = stockInItems.filter(item => item.productId && item.quantity > 0 && item.price >= 0);
+                if (validItems.length === 0) {
+                    showMessage('请确保商品信息完整且数量正确', 'warning');
+                    return;
+                }
+
+                // 开始入库流程
+                showMessage('正在处理入库...', 'info');
+
+                for (const item of validItems) {
+                    // 1. 更新商品库存
+                    const product = products.find(p => p.id === item.productId);
+                    if (product) {
+                        const newStock = (product.current_stock || 0) + item.quantity;
+                        await supabase
+                            .from('products')
+                            .update({ 
+                                current_stock: newStock,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', item.productId);
+                    }
+
+                    // 2. 记录交易
+                    await supabase
+                        .from('stock_transactions')
+                        .insert({
+                            product_id: item.productId,
+                            transaction_type: 'in',
+                            quantity: item.quantity,
+                            unit_price: item.price,
+                            batch_number: batchNumber,
+                            supplier: supplier,
+                            notes: item.notes,
+                            operator: '系统管理员',
+                            created_at: new Date(stockInDate).toISOString()
+                        });
+                }
+
+                showMessage('入库成功！', 'success');
+                resetForm();
+
+            } catch (error) {
+                console.error('入库失败:', error);
+                showMessage('入库失败: ' + error.message, 'danger');
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('supplier').value = '';
+            document.getElementById('batchNumber').value = '';
+            document.getElementById('stockInDate').value = new Date().toISOString().split('T')[0];
+            stockInItems = [];
+            renderStockInTable();
+        }
+
+        function showMessage(message, type = 'info') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+            alert.style.zIndex = '9999';
+            alert.style.maxWidth = '400px';
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alert);
+            
+            setTimeout(() => alert.remove(), 5000);
+        }
+    </script>
+</body>
+</html>
