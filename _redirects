@@ -1,0 +1,6 @@
+# 将根路径重定向到生产版主页
+/ /index-production.html 200
+
+# 旧页面重定向到生产版本
+/inventory.html /inventory-production.html 200
+/stock-in.html /stock-in-production.html 200

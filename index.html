@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>仓库管理系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="index-production.html">仓库管理系统</a>
+            <div class="navbar-nav">
+                <a class="nav-link active" href="index-production.html">首页</a>
+                <a class="nav-link" href="inventory-production.html">库存列表</a>
+                <a class="nav-link" href="stock-in-production.html">商品入库</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>欢迎使用仓库管理系统</h1>
+                
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">总库存价值</h5>
+                                <p class="card-text display-4" id="totalValue">¥0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">商品种类</h5>
+                                <p class="card-text display-4" id="productTypes">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h5 class="card-title">今日入库</h5>
+                                <p class="card-text display-4" id="todayStockIn">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>库存状态概览</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row text-center">
+                                    <div class="col-md-4">
+                                        <h6 class="text-success">正常库存</h6>
+                                        <h4 id="normalStock">0</h4>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-warning">低库存</h6>
+                                        <h4 id="lowStock">0</h4>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6 class="text-danger">缺货</h6>
+                                        <h4 id="outStock">0</h4>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>快速操作</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <a href="stock-in-production.html" class="btn btn-success">
+                                        📦 商品入库
+                                    </a>
+                                    <a href="inventory-production.html" class="btn btn-primary">
+                                        📋 查看库存
+                                    </a>
+                                    <button class="btn btn-info" onclick="refreshData()">
+                                        🔄 刷新数据
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5>最近入库记录</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="recentTransactions">
+                                    <p class="text-muted">暂无记录</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script src="config-production.js"></script>
+    
+    <script>
+        // 主页面 JavaScript 逻辑
+        console.log('🚀 仓库管理系统主页加载完成');
+        console.log('🔗 Supabase 状态:', typeof supabase);
+
+        // 初始化仪表板
+        async function initializeDashboard() {
+            try {
+                console.log('📊 开始加载仪表板数据...');
+                
+                if (!supabase) {
+                    throw new Error('Supabase 客户端未初始化');
+                }
+                
+                await Promise.all([
+                    loadTotalValue(),
+                    loadProductTypes(),
+                    loadTodayStockIn(),
+                    loadStockStatus(),
+                    loadRecentTransactions()
+                ]);
+                
+                console.log('✅ 仪表板数据加载完成');
+                
+            } catch (error) {
+                console.error('❌ 仪表板初始化失败:', error);
+                showErrorMessage('数据加载失败: ' + error.message);
+            }
+        }
+
+        // 加载总库存价值
+        async function loadTotalValue() {
+            try {
+                const { data: products, error } = await supabase
+                    .from(TABLES.PRODUCTS)
+                    .select('current_stock, price');
+                
+                if (error) throw error;
+                
+                const totalValue = products ? products.reduce((sum, product) => {
+                    return sum + ((product.current_stock || 0) * (product.price || 0));
+                }, 0) : 0;
+                
+                document.getElementById('totalValue').textContent = `¥${totalValue.toFixed(2)}`;
+                console.log('💰 总库存价值:', totalValue);
+                
+            } catch (error) {
+                console.error('加载总价值失败:', error);
+            }
+        }
+
+        // 加载商品种类
+        async function loadProductTypes() {
+            try {
+                const { data: categories, error } = await supabase
+                    .from(TABLES.CATEGORIES)
+                    .select('name');
+                
+                if (error) throw error;
+                
+                const count = categories ? categories.length : 0;
+                document.getElementById('productTypes').textContent = count;
+                console.log('📦 商品种类:', count);
+                
+            } catch (error) {
+                console.error('加载商品种类失败:', error);
+            }
+        }
+
+        // 加载今日入库
+        async function loadTodayStockIn() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const { data: transactions, error } = await supabase
+                    .from(TABLES.STOCK_TRANSACTIONS)
+                    .select('quantity')
+                    .eq('transaction_type', 'in')
+                    .gte('created_at', today);
+                
+                if (error) throw error;
+                
+                const todayInStock = transactions ? transactions.reduce((sum, t) => sum + (t.quantity || 0), 0) : 0;
+                document.getElementById('todayStockIn').textContent = todayInStock;
+                console.log('📥 今日入库:', todayInStock);
+                
+            } catch (error) {
+                console.error('加载今日入库失败:', error);
+            }
+        }
+
+        // 加载库存状态
+        async function loadStockStatus() {
+            try {
+                const { data: products, error } = await supabase
+                    .from(TABLES.PRODUCTS)
+                    .select('current_stock, min_stock');
+                
+                if (error) throw error;
+                
+                let normalCount = 0, lowCount = 0, outCount = 0;
+                
+                if (products) {
+                    products.forEach(product => {
+                        const stock = product.current_stock || 0;
+                        const min = product.min_stock || 0;
+                        
+                        if (stock === 0) {
+                            outCount++;
+                        } else if (stock <= min) {
+                            lowCount++;
+                        } else {
+                            normalCount++;
+                        }
+                    });
+                }
+                
+                document.getElementById('normalStock').textContent = normalCount;
+                document.getElementById('lowStock').textContent = lowCount;
+                document.getElementById('outStock').textContent = outCount;
+                
+                console.log('📊 库存状态 - 正常:', normalCount, '低库存:', lowCount, '缺货:', outCount);
+                
+            } catch (error) {
+                console.error('加载库存状态失败:', error);
+            }
+        }
+
+        // 加载最近交易记录
+        async function loadRecentTransactions() {
+            try {
+                const { data: transactions, error } = await supabase
+                    .from(TABLES.STOCK_TRANSACTIONS)
+                    .select(`
+                        *,
+                        products(name, sku)
+                    `)
+                    .eq('transaction_type', 'in')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+                
+                if (error) throw error;
+                
+                const container = document.getElementById('recentTransactions');
+                
+                if (!transactions || transactions.length === 0) {
+                    container.innerHTML = '<p class="text-muted">暂无记录</p>';
+                    return;
+                }
+                
+                let html = '<div class="list-group">';
+                transactions.forEach(transaction => {
+                    const time = new Date(transaction.created_at).toLocaleString('zh-CN');
+                    const productName = transaction.products?.name || '未知商品';
+                    
+                    html += `
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>${productName}</strong>
+                                    <br><small class="text-muted">${time}</small>
+                                </div>
+                                <span class="badge bg-success">+${transaction.quantity || 0}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                container.innerHTML = html;
+                console.log('📋 最近交易:', transactions.length);
+                
+            } catch (error) {
+                console.error('加载最近交易失败:', error);
+            }
+        }
+
+        // 刷新数据
+        async function refreshData() {
+            console.log('🔄 刷新数据中...');
+            await initializeDashboard();
+        }
+
+        // 显示错误消息
+        function showErrorMessage(message) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+            alert.style.zIndex = '9999';
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alert);
+            
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 等待配置加载完成
+            const waitForConfig = () => {
+                if (typeof supabase !== 'undefined' && supabase) {
+                    console.log('✅ 配置加载完成，开始初始化');
+                    initializeDashboard();
+                } else {
+                    console.log('⏳ 等待配置加载...');
+                    setTimeout(waitForConfig, 100);
+                }
+            };
+            
+            waitForConfig();
+        });
+    </script>
+</body>
+</html>
